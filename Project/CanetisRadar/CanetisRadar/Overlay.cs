@@ -13,6 +13,7 @@ using NAudio;
 using NAudio.CoreAudioApi;
 using IniParser;
 using IniParser.Model;
+using System.Diagnostics;
 
 namespace CanetisRadar
 {
@@ -40,8 +41,28 @@ namespace CanetisRadar
             InitializeComponent();
         }
 
+        private void ParseOptions()
+        {
+            var parser = new FileIniDataParser();
+            IniData data = parser.ReadFile(AppDomain.CurrentDomain.BaseDirectory + "settings.ini");
+            string m = data["basic"]["multiplier"];
+            string monitorStr = data["visual"]["monitor"];
+            multiplier = int.Parse(m);
+            int monitor = int.Parse(monitorStr);
+
+            if(monitor >= Screen.AllScreens.Length)
+            {
+                throw new ArgumentException("Specified screen invalid");
+            }
+
+            Screen screen = Screen.AllScreens[monitor];
+            Location = screen.WorkingArea.Location;
+        }
+
         private void Overlay_Load(object sender, EventArgs e)
         {
+            ParseOptions();
+
             this.TransparencyKey = Color.Turquoise;
             this.BackColor = Color.Turquoise;
 
@@ -50,11 +71,6 @@ namespace CanetisRadar
 
             this.WindowState = FormWindowState.Maximized;
             this.Opacity = 0.5;
-
-            var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(AppDomain.CurrentDomain.BaseDirectory + "settings.ini");
-            string m = data["basic"]["multiplier"];
-            multiplier = Int32.Parse(m);
 
             Thread t = new Thread(Loop);
             t.Start();
@@ -93,23 +109,8 @@ namespace CanetisRadar
                 x = x - tempthree + tempfour;
                 y = y + tempthree + tempfour;
 
-                if (y < 10)
-                {
-                    y = 10;
-                }
-                if (x < 10)
-                {
-                    x = 10;
-                }
-
-                if (y > 140)
-                {
-                    y = 140;
-                }
-                if (x > 140)
-                {
-                    x = 140;
-                }
+                x = MathUtils.Clamp(x, 10, 140);
+                y = MathUtils.Clamp(y, 10, 140);
 
                 string infotext = "";
                 for (int i = 0; i < device.AudioMeterInformation.PeakValues.Count; i++)
